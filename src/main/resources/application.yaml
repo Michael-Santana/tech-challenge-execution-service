@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: execution-service
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://execution_service:execution_service@localhost:27017/execution_service?authSource=execution_service}
+      auto-index-creation: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+server:
+  port: ${SERVER_PORT:8083}
+  servlet:
+    context-path: /api/v1
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true
+app:
+  messaging:
+    os-exchange: ${OS_EXCHANGE:os.exchangeee}
+    os-routing-key: ${OS_EXECUTION_ROUTING_KEY:execution.status}
+    os-events-queue: ${EXECUTION_OS_EVENTS_QUEUE:execution.os-events.queue}
+    os-events-routing-key: ${OS_EVENTS_ROUTING_KEY:os.event}
+    billing-exchange: ${BILLING_EXCHANGE:billing.exchange}
+    billing-events-queue: ${EXECUTION_BILLING_EVENTS_QUEUE:execution.billing-events.queue}
+    payment-approved-routing-key: ${PAYMENT_APPROVED_ROUTING_KEY:billing.payment_approved}
+    dead-letter-exchange: ${EXECUTION_DLX:execution.dlx}
+    dead-letter-queue: ${EXECUTION_DLQ:execution.events.dlq}
+  outbox:
+    delay-ms: ${OUTBOX_DELAY_MS:1000}
