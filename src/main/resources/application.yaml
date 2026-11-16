@@ -35,7 +35,7 @@ springdoc:
     enabled: true
 app:
   messaging:
-    os-exchange: ${OS_EXCHANGE:os.exchangeee}
+    os-exchange: ${OS_EXCHANGE:os.exchange}
     os-routing-key: ${OS_EXECUTION_ROUTING_KEY:execution.status}
     os-events-queue: ${EXECUTION_OS_EVENTS_QUEUE:execution.os-events.queue}
     os-events-routing-key: ${OS_EVENTS_ROUTING_KEY:os.event}

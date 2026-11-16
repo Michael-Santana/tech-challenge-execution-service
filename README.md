@@ -15,10 +15,10 @@ O documento por OS armazena status, diagnostico, reparos, timestamps, IDs de eve
 
 ## Fluxo operacional
 
-1. A abertura da OS publica `ORDER_CREATED` no exchange `os.exchangeee`; o Execution Service cria a ficha `WAITING_FOR_DIAGNOSIS`.
-2. A oficina inicia o diagnostico e registra o resultado. O status vai para `WAITING_FOR_APPROVAL`, liberando o Billing Service para gerar o orcamento.
-3. Ao receber `PAYMENT_APPROVED` no exchange `billing.exchange`, a OS entra na fila FIFO `QUEUED_FOR_REPAIR`. A aprovacao pode chegar antes do diagnostico; nesse caso fica registrada e a OS entra na fila assim que o diagnostico for salvo.
-4. A oficina inicia os reparos, registra cada reparo realizado e conclui a execucao. O servico publica os status `EM_DIAGNOSTICO`, `AGUARDANDO_APROVACAO`, `EM_EXECUCAO` e `FINALIZADA` no exchange `os.exchangeee`, chave `execution.status`. O OS Service consome esses eventos e atualiza seu proprio banco e historico.
+1. A abertura da OS publica `ORDER_CREATED` no exchange `os.exchange`; o Execution Service cria a ficha `WAITING_FOR_DIAGNOSIS`.
+2. A oficina inicia o diagnostico e registra o resultado. O status vai para `WAITING_FOR_APPROVAL`. A integracao com o Billing para gerar o orcamento ainda precisa ser implementada.
+3. Ao receber `PAYMENT_APPROVED` no exchange `billing.exchange`, a OS entra na fila FIFO `QUEUED_FOR_REPAIR`. O pagamento pode chegar antes do diagnostico; nesse caso fica registrado e a OS entra na fila assim que o diagnostico for salvo.
+4. A oficina inicia os reparos, registra cada reparo realizado e conclui a execucao. O servico publica os status `EM_DIAGNOSTICO`, `AGUARDANDO_APROVACAO`, `EM_EXECUCAO` e `FINALIZADA` no exchange `os.exchange`, chave `execution.status`. O consumo desses eventos pelo OS Service ainda precisa ser implementado.
 
 O fluxo e iniciado por eventos e operacoes da oficina; nenhuma chamada direta entre bancos ou chamada REST sincronica para OS/Billing e necessaria. A outbox evita perder notificacoes quando o processo cai depois de gravar uma alteracao local.
 
@@ -36,7 +36,7 @@ Base URL: `http://localhost:8083/api/v1`; Swagger UI: `/swagger-ui.html`.
 | `POST` | `/executions/{orderId}/repairs` | Registra `{"description":"..."}` para um reparo realizado |
 | `POST` | `/executions/{orderId}/complete` | Conclui a OS (exige pelo menos um reparo) e comunica `FINALIZADA` |
 
-Transicoes fora de ordem retornam HTTP 409; OS ainda nao recebida retorna HTTP 404; campos de diagnostico e reparo vazios retornam HTTP 400. O OS Service deve estar configurado com o mesmo exchange e chave de saida (`os.exchangeee` / `execution.status`).
+Transicoes fora de ordem retornam HTTP 409; OS ainda nao recebida retorna HTTP 404; campos de diagnostico e reparo vazios retornam HTTP 400. O OS Service deve ser configurado para consumir o exchange e a chave de saida (`os.exchange` / `execution.status`).
 
 ## Desenvolvimento local
 

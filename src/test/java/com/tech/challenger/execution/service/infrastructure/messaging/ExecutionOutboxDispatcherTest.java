@@ -36,7 +36,7 @@ class ExecutionOutboxDispatcherTest {
         }).when(rabbitTemplate).convertAndSend(
                 anyString(), anyString(), any(Object.class), any(CorrelationData.class));
 
-        new ExecutionOutboxDispatcher(repository, mongoTemplate, rabbitTemplate, "os.exchangeee", "execution.status")
+        new ExecutionOutboxDispatcher(repository, mongoTemplate, rabbitTemplate, "os.exchange", "execution.status")
                 .dispatchPendingEvents();
 
         verify(mongoTemplate).updateFirst(any(), any(), any(Class.class));
@@ -54,7 +54,7 @@ class ExecutionOutboxDispatcherTest {
         doThrow(new IllegalStateException("broker indisponivel")).when(rabbitTemplate)
                 .convertAndSend(anyString(), anyString(), any(Object.class), any(CorrelationData.class));
 
-        new ExecutionOutboxDispatcher(repository, mongoTemplate, rabbitTemplate, "os.exchangeee", "execution.status")
+        new ExecutionOutboxDispatcher(repository, mongoTemplate, rabbitTemplate, "os.exchange", "execution.status")
                 .dispatchPendingEvents();
 
         if (order.getPendingEvents().getFirst().isPublished()) {
