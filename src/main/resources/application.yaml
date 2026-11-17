@@ -42,6 +42,7 @@ app:
     billing-exchange: ${BILLING_EXCHANGE:billing.exchange}
     billing-events-queue: ${EXECUTION_BILLING_EVENTS_QUEUE:execution.billing-events.queue}
     payment-approved-routing-key: ${PAYMENT_APPROVED_ROUTING_KEY:billing.payment_approved}
+    budget-rejected-routing-key: ${BUDGET_REJECTED_ROUTING_KEY:billing.budget_rejected}
     dead-letter-exchange: ${EXECUTION_DLX:execution.dlx}
     dead-letter-queue: ${EXECUTION_DLQ:execution.events.dlq}
   outbox:

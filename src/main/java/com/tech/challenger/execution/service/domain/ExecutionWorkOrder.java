@@ -25,6 +25,7 @@ public class ExecutionWorkOrder {
 
     private String diagnosis;
     private boolean paymentApproved;
+    private boolean refundRequired;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant queuedAt;
@@ -75,6 +76,14 @@ public class ExecutionWorkOrder {
 
     public void setPaymentApproved(boolean paymentApproved) {
         this.paymentApproved = paymentApproved;
+    }
+
+    public boolean isRefundRequired() {
+        return refundRequired;
+    }
+
+    public void setRefundRequired(boolean refundRequired) {
+        this.refundRequired = refundRequired;
     }
 
     public Instant getCreatedAt() {

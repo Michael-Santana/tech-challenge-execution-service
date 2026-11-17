@@ -6,5 +6,6 @@ public enum ExecutionStatus {
     WAITING_FOR_APPROVAL,
     QUEUED_FOR_REPAIR,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

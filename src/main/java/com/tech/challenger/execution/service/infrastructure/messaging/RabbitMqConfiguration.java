@@ -74,6 +74,12 @@ public class RabbitMqConfiguration {
     }
 
     @Bean
+    Binding budgetRejectedBinding(Queue billingEventsQueue, TopicExchange billingExchange,
+            @Value("${app.messaging.budget-rejected-routing-key}") String routingKey) {
+        return BindingBuilder.bind(billingEventsQueue).to(billingExchange).with(routingKey);
+    }
+
+    @Bean
     Binding deadLetterBinding(Queue deadLetterQueue, TopicExchange deadLetterExchange) {
         return BindingBuilder.bind(deadLetterQueue).to(deadLetterExchange).with("execution.dead");
     }

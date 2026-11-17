@@ -10,6 +10,7 @@ public record ExecutionResponse(
         ExecutionStatus status,
         String diagnosis,
         boolean paymentApproved,
+        boolean refundRequired,
         Instant createdAt,
         Instant updatedAt,
         Instant queuedAt,

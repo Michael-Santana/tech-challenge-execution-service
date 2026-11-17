@@ -11,6 +11,8 @@ import com.tech.challenger.execution.service.domain.RepairRecord;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ExecutionService {
 
+    private static final Logger log = LoggerFactory.getLogger(ExecutionService.class);
     private final ExecutionWorkOrderRepository workOrders;
 
     public ExecutionService(ExecutionWorkOrderRepository workOrders) {
@@ -28,12 +31,17 @@ public class ExecutionService {
         if (event == null || event.orderId() == null || event.eventType() == null) {
             throw new IllegalArgumentException("Evento da OS sem orderId ou eventType");
         }
-        if (!"ORDER_CREATED".equals(event.eventType()) && !"OS_OPENED".equals(event.eventType())) {
+        boolean opened = "ORDER_CREATED".equals(event.eventType()) || "OS_OPENED".equals(event.eventType());
+        boolean cancelled = "STATUS_UPDATED".equals(event.eventType()) && "CANCELADA".equals(event.newStatus());
+        if (!opened && !cancelled) {
             return;
         }
         String eventId = event.id() != null ? event.id() : event.orderId() + ":" + event.eventType();
         ExecutionWorkOrder execution = getOrCreate(event.orderId());
         if (execution.getProcessedEventIds().add(eventId)) {
+            if (cancelled) {
+                cancel(execution);
+            }
             execution.setUpdatedAt(Instant.now());
             workOrders.save(execution);
         }
@@ -43,7 +51,9 @@ public class ExecutionService {
         if (event == null || event.orderId() == null || event.eventType() == null) {
             throw new IllegalArgumentException("Evento de cobranca sem orderId ou eventType");
         }
-        if (!"PAYMENT_APPROVED".equals(event.eventType())) {
+        boolean approved = "PAYMENT_APPROVED".equals(event.eventType());
+        boolean rejected = "BUDGET_REJECTED".equals(event.eventType());
+        if (!approved && !rejected) {
             return;
         }
         String eventId = event.eventId() != null
@@ -53,9 +63,17 @@ public class ExecutionService {
         if (!execution.getProcessedEventIds().add(eventId)) {
             return;
         }
-        execution.setPaymentApproved(true);
-        if (execution.getStatus() == ExecutionStatus.WAITING_FOR_APPROVAL) {
-            queueForRepair(execution);
+        if (rejected) {
+            cancel(execution);
+        } else if (execution.getStatus() == ExecutionStatus.CANCELLED) {
+            execution.setPaymentApproved(true);
+            execution.setRefundRequired(true);
+            log.warn("Pagamento recebido para OS cancelada {}; estorno manual necessario", event.orderId());
+        } else {
+            execution.setPaymentApproved(true);
+            if (execution.getStatus() == ExecutionStatus.WAITING_FOR_APPROVAL) {
+                queueForRepair(execution);
+            }
         }
         execution.setUpdatedAt(Instant.now());
         workOrders.save(execution);
@@ -152,6 +170,17 @@ public class ExecutionService {
         execution.setQueuedAt(Instant.now());
     }
 
+    private void cancel(ExecutionWorkOrder execution) {
+        if (execution.getStatus() == ExecutionStatus.COMPLETED) {
+            throw new IllegalStateException("Cancelamento de reparo concluido requer tratamento manual");
+        }
+        execution.setRefundRequired(execution.isPaymentApproved());
+        if (execution.isRefundRequired()) {
+            log.warn("OS {} cancelada apos pagamento; estorno manual necessario", execution.getOrderId());
+        }
+        execution.setStatus(ExecutionStatus.CANCELLED);
+    }
+
     private void addEvent(ExecutionWorkOrder execution, String eventType, String osStatus, String description) {
         execution.addPendingEvent(new ExecutionEvent(
                 UUID.randomUUID().toString(), eventType, execution.getOrderId(),
@@ -172,7 +201,7 @@ public class ExecutionService {
     private ExecutionResponse toResponse(ExecutionWorkOrder execution, Integer queuePosition) {
         return new ExecutionResponse(
                 execution.getOrderId(), execution.getStatus(), execution.getDiagnosis(),
-                execution.isPaymentApproved(), execution.getCreatedAt(), execution.getUpdatedAt(),
+                execution.isPaymentApproved(), execution.isRefundRequired(), execution.getCreatedAt(), execution.getUpdatedAt(),
                 execution.getQueuedAt(), execution.getStartedAt(), execution.getCompletedAt(),
                 List.copyOf(execution.getRepairs()), queuePosition);
     }

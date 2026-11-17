@@ -26,7 +26,7 @@ class ExecutionControllerTest {
         service = mock(ExecutionService.class);
         controller = new ExecutionController(service);
         response = new ExecutionResponse(5L, ExecutionStatus.QUEUED_FOR_REPAIR,
-                "Falha", true, null, null, null, null, null, List.of(), 1);
+                "Falha", true, false, null, null, null, null, null, List.of(), 1);
     }
 
     @Test

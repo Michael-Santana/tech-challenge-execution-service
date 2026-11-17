@@ -125,4 +125,28 @@ class ExecutionServiceTest {
                 .hasMessageContaining("ao menos um reparo");
         assertThat(service.findByOrderId(72L).status()).isEqualTo(ExecutionStatus.IN_PROGRESS);
     }
+
+    @Test
+    void rejectedBudgetCancelsExecutionAndBlocksLatePaymentAndRepairs() {
+        service.handleOsEvent(new OsEvent("os-event", 91L, "ORDER_CREATED", "RECEBIDA", "now"));
+        service.startDiagnosis(91L);
+        service.recordDiagnosis(91L, "Diagnostico");
+        BillingEvent rejected = new BillingEvent("rejected", "BUDGET_REJECTED", 91L, "budget", "now");
+        service.handleBillingEvent(rejected);
+        service.handleBillingEvent(rejected);
+
+        assertThat(service.findByOrderId(91L).status()).isEqualTo(ExecutionStatus.CANCELLED);
+        assertThatThrownBy(() -> service.startRepairs(91L)).isInstanceOf(ResponseStatusException.class);
+        service.handleBillingEvent(new BillingEvent("late-payment", "PAYMENT_APPROVED", 91L, "budget", "now"));
+        assertThat(service.findByOrderId(91L).refundRequired()).isTrue();
+        assertThat(service.findByOrderId(91L).status()).isEqualTo(ExecutionStatus.CANCELLED);
+    }
+
+    @Test
+    void cancellationDoesNotPretendToReverseAnApprovedPayment() {
+        service.handleBillingEvent(new BillingEvent("payment", "PAYMENT_APPROVED", 92L, "budget", "now"));
+        service.handleOsEvent(new OsEvent("cancel", 92L, "STATUS_UPDATED", "CANCELADA", "now"));
+        assertThat(service.findByOrderId(92L).status()).isEqualTo(ExecutionStatus.CANCELLED);
+        assertThat(service.findByOrderId(92L).refundRequired()).isTrue();
+    }
 }

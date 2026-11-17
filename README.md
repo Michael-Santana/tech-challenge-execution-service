@@ -18,9 +18,18 @@ O documento por OS armazena status, diagnostico, reparos, timestamps, IDs de eve
 1. A abertura da OS publica `ORDER_CREATED` no exchange `os.exchange`; o Execution Service cria a ficha `WAITING_FOR_DIAGNOSIS`.
 2. A oficina inicia o diagnostico e registra o resultado. O status vai para `WAITING_FOR_APPROVAL`. A integracao com o Billing para gerar o orcamento ainda precisa ser implementada.
 3. Ao receber `PAYMENT_APPROVED` no exchange `billing.exchange`, a OS entra na fila FIFO `QUEUED_FOR_REPAIR`. O pagamento pode chegar antes do diagnostico; nesse caso fica registrado e a OS entra na fila assim que o diagnostico for salvo.
-4. A oficina inicia os reparos, registra cada reparo realizado e conclui a execucao. O servico publica os status `EM_DIAGNOSTICO`, `AGUARDANDO_APROVACAO`, `EM_EXECUCAO` e `FINALIZADA` no exchange `os.exchange`, chave `execution.status`. O consumo desses eventos pelo OS Service ainda precisa ser implementado.
+4. A oficina inicia os reparos, registra cada reparo realizado e conclui a execucao. O servico publica os status `EM_DIAGNOSTICO`, `AGUARDANDO_APROVACAO`, `EM_EXECUCAO` e `FINALIZADA` no exchange `os.exchange`, chave `execution.status`. O OS Service deve consumir esses eventos para atualizar seu estado.
 
 O fluxo e iniciado por eventos e operacoes da oficina; nenhuma chamada direta entre bancos ou chamada REST sincronica para OS/Billing e necessaria. A outbox evita perder notificacoes quando o processo cai depois de gravar uma alteracao local.
+
+O Execution recebe `BUDGET_REJECTED` na chave `billing.budget_rejected` e
+`STATUS_UPDATED` com `newStatus` `CANCELADA` na chave `os.event`. Esses eventos
+bloqueiam novos reparos. Se o pagamento ja foi aprovado ou chegar depois do
+cancelamento, a consulta de execucao retorna `refundRequired: true` e registra
+um alerta. Isso sinaliza o trabalho manual, mas **nao executa nem registra o
+estorno no Mercado Pago**. Cancelamento de reparo ja concluido e enviado para
+a DLQ para tratamento manual. O controle atual de concorrencia e por processo:
+nao execute multiplas replicas ate implementar controle concorrente no MongoDB.
 
 ## API
 
