@@ -1,0 +1,48 @@
+services:
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: execution_service
+    ports:
+      - "27017:27017"
+    volumes:
+      - execution_mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: execution
+      RABBITMQ_DEFAULT_PASS: execution
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8083:8083"
+    environment:
+      MONGODB_URI: mongodb://root:root@mongodb:27017/execution_service?authSource=admin
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: execution
+      RABBITMQ_PASSWORD: execution
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  execution_mongodb:
